@@ -2,23 +2,26 @@ extends Node2D
 
 var hovered = false
 var highlighted = false setget _set_highlighted
+var _hover_tween = null
 
 func _ready():
 	_set_highlighted(false)
 	
 func _mouse_entered(_area):
 	hovered = true
-	var tween = Tween.new()
-	tween.interpolate_property($Highlight/Sprite.material, "shader_param/hovered", 0, 1, 0.1, Tween.TRANS_CUBIC, Tween.EASE_IN_OUT)
-	add_child(tween)
-	tween.start()
+	_animate_hover(1)
 
 func _mouse_exited(_area):
 	hovered = false
-	var tween = Tween.new()
-	tween.interpolate_property($Highlight/Sprite.material, "shader_param/hovered", 1, 0, 0.1, Tween.TRANS_CUBIC, Tween.EASE_IN_OUT)
-	add_child(tween)
-	tween.start()
+	_animate_hover(0)
+
+func _animate_hover(value):
+	if not is_inside_tree():
+		return
+	if _hover_tween != null and is_instance_valid(_hover_tween) and _hover_tween.is_valid():
+		_hover_tween.kill()
+	_hover_tween = create_tween().bind_node(self).set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_IN_OUT)
+	_hover_tween.tween_property($Highlight/Sprite.material, "shader_param/hovered", value, 0.1)
 	
 func _input(event):
 	if event is InputEventMouseButton:

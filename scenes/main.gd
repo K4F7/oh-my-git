@@ -31,7 +31,9 @@ var _hint_server
 const WIN_REVEAL_DELAY_MSEC = 2000
 
 var _level_started_at_msec = 0
-var _win_reveal_timer = null
+var _win_reveal_token = 0
+var _win_reveal_active = false
+var _sfx_unmute_token = 0
 var _hint_client_connection
 
 func _ready():
@@ -136,14 +138,17 @@ func load_level(level_id):
 	update_repos()
 	
 	# Unmute the audio after a while, so that player can hear pop sounds for
-	# nodes they create.
-	var t = Timer.new()
-	t.wait_time = 1
-	add_child(t)
-	t.start()
-	yield(t, "timeout")
+	# nodes they create. A child Timer would be freed with this scene and
+	# could resume the yield after the node is gone.
+	_sfx_unmute_token += 1
+	var unmute_token = _sfx_unmute_token
+	var unmute_timer = get_tree().create_timer(1.0)
+	unmute_timer.connect("timeout", self, "_unmute_sfx", [unmute_token])
+
+func _unmute_sfx(token):
+	if token != _sfx_unmute_token or not is_inside_tree():
+		return
 	AudioServer.set_bus_mute(AudioServer.get_bus_index("SFX"), false)
-	# FIXME: Need to clean these up when switching levels somehow.
 	
 #	chapter_select.select(game.current_chapter)
 #	level_select.select(game.current_level)
@@ -206,25 +211,24 @@ func show_win_status(win_states):
 		_show_level_win(level)
 
 func _schedule_win_reveal(remaining_msec):
-	if _win_reveal_timer:
+	if _win_reveal_active:
 		return
-	_win_reveal_timer = Timer.new()
-	_win_reveal_timer.one_shot = true
-	_win_reveal_timer.wait_time = max(float(remaining_msec) / 1000.0, 0.01)
-	add_child(_win_reveal_timer)
-	_win_reveal_timer.connect("timeout", self, "_on_win_reveal_timer_timeout")
-	_win_reveal_timer.start()
+	_win_reveal_active = true
+	_win_reveal_token += 1
+	var token = _win_reveal_token
+	var timer = get_tree().create_timer(max(float(remaining_msec) / 1000.0, 0.01))
+	timer.connect("timeout", self, "_on_win_reveal_timer_timeout", [token])
 
 func _cancel_win_reveal_timer():
-	if not _win_reveal_timer:
+	if not _win_reveal_active:
 		return
-	_win_reveal_timer.stop()
-	_win_reveal_timer.queue_free()
-	_win_reveal_timer = null
+	_win_reveal_active = false
+	_win_reveal_token += 1
 
-func _on_win_reveal_timer_timeout():
-	_win_reveal_timer.queue_free()
-	_win_reveal_timer = null
+func _on_win_reveal_timer_timeout(token):
+	if token != _win_reveal_token or not is_inside_tree():
+		return
+	_win_reveal_active = false
 	update_repos()
 
 func _show_level_win(level):

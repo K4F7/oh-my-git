@@ -9,6 +9,13 @@ export var command = "" setget set_command
 export var description = "" setget set_description
 export var energy = 0 setget set_energy
 
+const _ICON_REF = preload("res://images/ref.svg")
+const _ICON_COMMIT = preload("res://images/commit.svg")
+const _ICON_STRING = preload("res://images/string.svg")
+const _ICON_HEAD = preload("res://images/head.svg")
+const _ICON_FILE = preload("res://images/file.svg")
+const _ICON_REMOTE = preload("res://images/remote.svg")
+
 var _first_argument = null
 var _home_position = null
 var _home_rotation = null
@@ -94,12 +101,12 @@ func set_command(new_command):
 	if commands.size() > 1:
 		args = commands[1].replace("]", "")
 		args = args.replace(", ", "/")
-		args = args.replace("ref", " [img=20]images/ref.svg[/img] ")
-		args = args.replace("commit", " [img=20]images/commit.svg[/img] ")
-		args = args.replace("string", " [img=20]images/string.svg[/img] ")
-		args = args.replace("head", " [img=20]images/head.svg[/img] ")
-		args = args.replace("file", " [img=20]images/file.svg[/img] ")
-		args = args.replace("remote", " [img=20]images/remote.svg[/img] ")
+		args = args.replace("ref", " [img=20]%s[/img] " % _ICON_REF.resource_path)
+		args = args.replace("commit", " [img=20]%s[/img] " % _ICON_COMMIT.resource_path)
+		args = args.replace("string", " [img=20]%s[/img] " % _ICON_STRING.resource_path)
+		args = args.replace("head", " [img=20]%s[/img] " % _ICON_HEAD.resource_path)
+		args = args.replace("file", " [img=20]%s[/img] " % _ICON_FILE.resource_path)
+		args = args.replace("remote", " [img=20]%s[/img] " % _ICON_REMOTE.resource_path)
 	$Label.bbcode_text = commands[0] + args
 	#$Label.text = command
 
@@ -122,6 +129,18 @@ func set_id(new_id):
 		$Image.texture = texture
 	$Panel/Glow.visible = not id in game.state["played_cards"]
 	
+func release_for_free():
+	# Drop texture links while both objects are still alive. Freeing the card
+	# otherwise disconnects _texture_changed from a texture that is already gone.
+	for path in ["Image", "Sprite", "Panel/Glow"]:
+		if has_node(path):
+			var node = get_node(path)
+			if node.get("texture") != null:
+				node.texture = null
+	if has_node("Label"):
+		$Label.bbcode_text = ""
+	queue_free()
+
 func move_back():
 	position = _home_position
 	rotation_degrees = _home_rotation

@@ -56,6 +56,7 @@ func run_async_thread(shell_command):
 	
 	var env = {}
 	env["HOME"] = game.tmp_prefix
+	env["HINT_TCP_PORT"] = str(game.HINT_TCP_PORT)
 	env["TERM"] = "xterm"
 	
 	var hacky_command = ""

@@ -1,6 +1,9 @@
 extends Node
 
 var tmp_prefix = OS.get_user_data_dir() + "/tmp/"
+# main.gd listens here for messages from scripts/hint, which reads the port
+# from the HINT_TCP_PORT environment variable set by the shells.
+const HINT_TCP_PORT = 1235
 var global_shell
 var fake_editor
 

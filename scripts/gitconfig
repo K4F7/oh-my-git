@@ -3,6 +3,8 @@
 	name = You
 [core]
 	editor = ~/fake-editor
+	# Show non-ASCII (e.g. Chinese) file names as-is instead of octal escapes.
+	quotePath = false
 [init]
 	templateDir = ""
 	defaultBranch = main

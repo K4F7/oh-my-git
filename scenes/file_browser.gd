@@ -135,7 +135,7 @@ func update():
 					#visible = is_visible				
 						
 func get_file_status(file_path, the_shell, idx):
-	var file_status = the_shell.run("git status -s '%s'" % file_path)
+	var file_status = the_shell.run("git status -s %s" % helpers.shell_quote(file_path))
 	if file_status.length()>0:
 		match file_status[idx]:
 			"D":
@@ -161,11 +161,11 @@ func item_clicked(item):
 		FileBrowserMode.WORKING_DIRECTORY:
 			text_edit.text = helpers.read_file(repository.shell._cwd + item.label)
 		FileBrowserMode.COMMIT:
-			text_edit.text = commit.repository.shell.run("git show %s:\"%s\"" % [commit.id, item.label])
+			text_edit.text = commit.repository.shell.run("git show %s" % helpers.shell_quote(commit.id + ":" + item.label))
 		FileBrowserMode.INDEX:
 			if item.status == item.IconStatus.CONFLICT:
 				return
-			text_edit.text = repository.shell.run("git show :\"%s\"" % [item.label])
+			text_edit.text = repository.shell.run("git show %s" % helpers.shell_quote(":" + item.label))
 			
 	open_file = item.label
 	text_edit.show()

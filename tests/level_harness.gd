@@ -89,6 +89,8 @@ func _play(name, spec):
 
 	if failure == "" and spec.has("notification") and not spec["notification"] in _notification_texts():
 		failure = "no notification '%s' (got %s)" % [spec["notification"], _notification_texts()]
+	if failure == "" and spec.has("files") and _file_browser_labels() != spec["files"]:
+		failure = "file browser shows %s, expected %s" % [_file_browser_labels(), spec["files"]]
 
 	# Exploratory cases only check that the game survives, not the level goals.
 	var goals_met = true
@@ -119,6 +121,14 @@ func _notification_texts():
 		if node.get_script() == preload("res://scenes/notification.gd"):
 			texts.push_back(node.text)
 	return texts
+
+func _file_browser_labels():
+	var labels = []
+	for item in main.file_browser.grid.get_children():
+		if not item.is_queued_for_deletion():
+			labels.push_back(item.label)
+	labels.sort()
+	return labels
 
 func _load_level(slug):
 	for chapter_id in range(levels.chapters.size()):

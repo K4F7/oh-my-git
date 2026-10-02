@@ -192,7 +192,8 @@ const NO_GOAL_LEVELS = ["sandbox/empty", "sandbox/remote", "sandbox/three-commit
 # Exploratory sessions that poke at the visualisation and file browser with
 # unusual but legal input. Each entry names the level to start from and the
 # steps to type; the run fails if the game quits (helpers.crash()), a command
-# times out, the terminal output lacks "expect" or contains "reject".
+# times out, the terminal output lacks "expect" or contains "reject", or the
+# file browser does not show exactly the names in "files".
 const EXPLORATORY = {
 	"hint-script": {"level": "sandbox/empty", "steps": ["hint '你好，hint'"], "reject": "Can't call method", "notification": "你好，hint"},
 	"editor-non-ascii": {"level": "sandbox/three-commits", "steps": [{"cmd": "echo x >> you; git commit -a", "editor": "喝水 ☕\n"}, "git log -1 --format=%s"], "expect": "$ git log -1 --format=%s\n喝水 ☕", "reject": "did not conform to UTF-8"},
@@ -208,5 +209,8 @@ const EXPLORATORY = {
 	"stash-ref": {"level": "sandbox/three-commits", "steps": ["echo change >> you", "git stash"]},
 	"subdirectory": {"level": "sandbox/three-commits", "steps": ["mkdir -p dir/sub", "echo x > dir/sub/file", "git add .", "git commit -m dir"]},
 	"empty-repo": {"level": "sandbox/empty", "steps": ["git init", "git status"]},
+	"quote-in-filename": {"level": "sandbox/three-commits", "steps": ["touch \"it's\"", "git add .", "git commit -m quote"], "files": ["it's", "you"]},
+	"quote-in-branch": {"level": "sandbox/three-commits", "steps": ["git branch \"it's\""]},
+	"chinese-filename": {"level": "sandbox/three-commits", "steps": ["echo 你好 > 笔记.txt", "git add .", "git commit -m 中文"], "reject": "\\347", "files": ["you", "笔记.txt"]},
 	"long-output": {"level": "bisect/bisect", "steps": ["git log"]},
 }

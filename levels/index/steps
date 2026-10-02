@@ -17,10 +17,10 @@ git commit -m "The beginning"
 [win]
 
 # 修改三个对象，形成一串合理的事件顺序！
-test "$(git diff --name-only | wc -l)" -eq 3 || file -f .git/candle-changed && touch .git/candle-changed
+test "$(git diff --name-only | wc -l)" -eq 3 || test -f .git/candle-changed && touch .git/candle-changed
 
 # 只添加其中一个改动！
-test "$(git diff --cached --name-only | wc -l)" -eq 1 || file -f .git/candle-added && touch .git/candle-added
+test "$(git diff --cached --name-only | wc -l)" -eq 1 || test -f .git/candle-added && touch .git/candle-added
 
 # 然后创建一个提交 commit。
 COUNT=0

@@ -22,7 +22,7 @@ echo "The candle is burning with a blue flame." > candle
 [win]
 
 # 添加 candle。
-test "$(git diff --cached --name-only)" = "candle" || file -f .git/candle-added && touch .git/candle-added
+test "$(git diff --cached --name-only)" = "candle" || test -f .git/candle-added && touch .git/candle-added
 
 # 创建一个提交 commit。
 test "$(git ls-tree --name-only HEAD)" = "candle"

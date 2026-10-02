@@ -22,10 +22,10 @@ git commit -m "The beginning"
 [win]
 
 # 修改 candle。
-test "$(git diff --name-only)" = "candle" || file -f .git/candle-changed && touch .git/candle-changed
+test "$(git diff --name-only)" = "candle" || test -f .git/candle-changed && touch .git/candle-changed
 
 # 添加 candle。
-test "$(git diff --cached --name-only)" = "candle" || file -f .git/candle-added && touch .git/candle-added
+test "$(git diff --cached --name-only)" = "candle" || test -f .git/candle-added && touch .git/candle-added
 
 # 创建一个提交 commit。
 test "$(git diff --name-only HEAD HEAD^)" = "candle"

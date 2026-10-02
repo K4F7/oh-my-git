@@ -38,7 +38,7 @@ var _hint_client_connection
 
 func _ready():
 	_hint_server = TCP_Server.new()
-	_hint_server.listen(1235, "127.0.0.1")
+	_hint_server.listen(game.HINT_TCP_PORT, "127.0.0.1")
 	
 	var args = helpers.parse_args()
 	
@@ -67,7 +67,7 @@ func _process(delta):
 	if _hint_server.is_connection_available():
 		_hint_client_connection = _hint_server.take_connection()
 		var length = _hint_client_connection.get_u32()
-		var message = _hint_client_connection.get_string(length)
+		var message = _hint_client_connection.get_utf8_string(length)
 		game.notify(message)
 #	if game.used_cards:
 #		$Menu/CLIBadge.impossible = true

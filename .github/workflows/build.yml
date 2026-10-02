@@ -15,46 +15,50 @@ env:
 
 jobs:
   build:
-    name: Build Windows and macOS packages
-    runs-on: ubuntu-20.04
-    container:
-      image: barichello/godot-ci:3.2.3
+    name: Build macOS package
+    runs-on: ubuntu-24.04
 
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Install dependencies
+      - name: Install Godot 3.2.3
         run: |
-          apt-get update
-          apt-get install -y --no-install-recommends make wget zip p7zip p7zip-full
-
-      - name: Setup Godot export templates
-        run: |
-          mkdir -p ~/.local/share/godot/templates
-          mv "/root/.local/share/godot/templates/${GODOT_VERSION}.stable" \
-             "$HOME/.local/share/godot/templates/${GODOT_VERSION}.stable"
+          set -euo pipefail
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends make unzip zip
+          curl -fsSL -o /tmp/godot.zip \
+            "https://github.com/godotengine/godot/releases/download/${GODOT_VERSION}-stable/Godot_v${GODOT_VERSION}-stable_linux_headless.64.zip"
+          unzip -q /tmp/godot.zip -d /tmp/godot
+          sudo install -m 755 "/tmp/godot/Godot_v${GODOT_VERSION}-stable_linux_headless.64" /usr/local/bin/godot
+          curl -fsSL -o /tmp/templates.tpz \
+            "https://github.com/godotengine/godot/releases/download/${GODOT_VERSION}-stable/Godot_v${GODOT_VERSION}-stable_export_templates.tpz"
+          mkdir -p "${HOME}/.local/share/godot/templates/${GODOT_VERSION}.stable"
+          unzip -q /tmp/templates.tpz -d /tmp/templates
+          mv /tmp/templates/templates/* "${HOME}/.local/share/godot/templates/${GODOT_VERSION}.stable/"
+          test -f "${HOME}/.local/share/godot/templates/${GODOT_VERSION}.stable/osx.zip"
+          godot --version
 
       - name: Build macOS
         run: make macos
 
-      - name: Build Windows
-        run: make windows
+      - name: Check archive
+        run: |
+          set -euo pipefail
+          unzip -t "build/${PROJECT_NAME}-macos.zip"
+          unzip -l "build/${PROJECT_NAME}-macos.zip" | head -n 40
+          unzip -l "build/${PROJECT_NAME}-macos.zip" | grep -q '\.app/'
 
-      - name: Upload build artifacts
+      - name: Upload build artifact
         uses: actions/upload-artifact@v4
         with:
-          name: ${{ env.PROJECT_NAME }}-windows-macos
-          path: |
-            build/${{ env.PROJECT_NAME }}-macos.zip
-            build/${{ env.PROJECT_NAME }}-windows.zip
+          name: ${{ env.PROJECT_NAME }}-macos
+          path: build/${{ env.PROJECT_NAME }}-macos.zip
           if-no-files-found: error
 
       - name: Publish GitHub Release
         if: startsWith(github.ref, 'refs/tags/')
         uses: softprops/action-gh-release@v2
         with:
-          files: |
-            build/${{ env.PROJECT_NAME }}-macos.zip
-            build/${{ env.PROJECT_NAME }}-windows.zip
+          files: build/${{ env.PROJECT_NAME }}-macos.zip
           generate_release_notes: true

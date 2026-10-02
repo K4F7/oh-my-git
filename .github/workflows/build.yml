@@ -37,7 +37,10 @@ jobs:
           unzip -q /tmp/templates.tpz -d /tmp/templates
           mv /tmp/templates/templates/* "${HOME}/.local/share/godot/templates/${GODOT_VERSION}.stable/"
           test -f "${HOME}/.local/share/godot/templates/${GODOT_VERSION}.stable/osx.zip"
-          godot --version
+          # Godot 3.2 prints the version, then exits 255 from its error path.
+          version_out="$(godot --version 2>&1 || true)"
+          printf '%s\n' "$version_out"
+          printf '%s\n' "$version_out" | grep -q "${GODOT_VERSION}"
 
       - name: Build macOS
         run: make macos

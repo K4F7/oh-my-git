@@ -4,8 +4,8 @@
 #
 #   GODOT=/path/to/godot tests/run_tests.sh
 #
-# GODOT defaults to "godot". With a windowed (X11) build, a display is needed;
-# use xvfb-run on headless machines.
+# GODOT defaults to "godot". The headless Linux build needs no display; a
+# windowed (X11) build needs DISPLAY (or xvfb-run).
 set -u
 cd "$(dirname "$0")/.."
 godot="${GODOT:-godot}"
@@ -42,6 +42,20 @@ for case in $cases; do
 		failed=1
 	fi
 done
+
+# A git that is found on PATH but cannot run (like macOS' /usr/bin/git stub
+# without the Command Line Tools) must lead to the no_git screen, not a quit.
+broken_git_dir="$log_dir/broken-git"
+mkdir -p "$broken_git_dir"
+printf '#!/bin/sh\necho "xcrun: error: invalid active developer path" >&2\nexit 1\n' > "$broken_git_dir/git"
+chmod +x "$broken_git_dir/git"
+PATH="$broken_git_dir:$PATH" "$godot" --no-window --path . res://tests/startup_probe.tscn > "$log_dir/broken-git.log" 2>&1
+if grep -q '^STARTUP_SCENE res://scenes/no_git.tscn$' "$log_dir/broken-git.log"; then
+	echo "ok      startup/broken-git"
+else
+	echo "FAILED  startup/broken-git (see $log_dir/broken-git.log)"
+	failed=1
+fi
 
 echo "logs: $log_dir"
 exit $failed

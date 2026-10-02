@@ -6,6 +6,11 @@ var exit_code
 var _cwd
 var _os = OS.get_name()
 
+# Apps started from the macOS Finder/Dock only get /usr/bin:/bin:/usr/sbin:/sbin,
+# where /usr/bin/git is a stub unless the Command Line Tools are installed.
+# Also look where Homebrew installs git (Apple Silicon, then Intel).
+const MACOS_EXTRA_PATH = "/opt/homebrew/bin:/usr/local/bin:"
+
 func _init():
 	# Create required directories and move into the tmp directory.
 	_cwd = "/tmp"
@@ -57,12 +62,23 @@ func run_async_thread(shell_command):
 	for variable in env:
 		hacky_command += "export %s='%s';" % [variable, env[variable]]
 	
-	hacky_command += "export PATH=\'"+game.tmp_prefix+":'\"$PATH\";"
+	var extra_path = MACOS_EXTRA_PATH if _os == "OSX" else ""
+	hacky_command += "export PATH=\'"+game.tmp_prefix+":"+extra_path+"'\"$PATH\";"
 	hacky_command += "cd '%s' || exit 1;" % _cwd
 	hacky_command += command
 
 	var result
-	if _os == "X11" or _os == "OSX":
+	if _os == "Windows":
+		# On Windows, if the command contains a newline (even if inside a string),
+		# execution will end. To avoid that, we first write the command to a file,
+		# and run that file with bash.
+		var script_path = game.tmp_prefix + "command" + str(randi())
+		helpers.write_file(script_path, hacky_command)
+		result = helpers.exec(_shell_binary(), [script_path], crash_on_fail)
+	else:
+		# Linux ("X11", or "Server" for headless builds), macOS ("OSX") and
+		# other Unix-likes all run the command through bash.
+		#
 		# Godot's OS.execute wraps each argument in double quotes before executing
 		# on Linux and macOS.
 		# Because we want to be in a single-quote context, where nothing is evaluated,
@@ -80,15 +96,6 @@ func run_async_thread(shell_command):
 		
 		hacky_command = '"\''+hacky_command.replace("'", "'\"'\"'")+'\'"'
 		result = helpers.exec(_shell_binary(), ["-c",  hacky_command], crash_on_fail)
-	elif _os == "Windows":
-		# On Windows, if the command contains a newline (even if inside a string),
-		# execution will end. To avoid that, we first write the command to a file,
-		# and run that file with bash.
-		var script_path = game.tmp_prefix + "command" + str(randi())
-		helpers.write_file(script_path, hacky_command)
-		result = helpers.exec(_shell_binary(), [script_path], crash_on_fail)
-	else:
-		helpers.crash("尚未实现的操作系统：%s" % _os)
 	
 	if debug:
 		print(result["output"])
@@ -98,12 +105,9 @@ func run_async_thread(shell_command):
 	shell_command.emit_signal("done")
 	
 func _shell_binary():
-	if _os == "X11" or _os == "OSX":
-		return "bash"
-	elif _os == "Windows":
+	if _os == "Windows":
 		return "dependencies\\windows\\git\\bin\\bash.exe"
-	else:
-		helpers.crash("不支持的操作系统：%s" % _os)
+	return "bash"
 
 #var _t	
 #func run_async(command):

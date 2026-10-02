@@ -38,7 +38,9 @@ func _ready():
 #	print(cmd)
 #	helpers.crash(":)")
 
-	if global_shell.run("command -v git &>/dev/null && echo yes || echo no") == "no\n":
+	# Check that git actually runs: macOS ships a /usr/bin/git stub that only
+	# fails until the Command Line Tools are installed.
+	if global_shell.run("git --version &>/dev/null && echo yes || echo no") == "no\n":
 		game.skipped_title = true
 		get_tree().change_scene("res://scenes/no_git.tscn")
 	else:

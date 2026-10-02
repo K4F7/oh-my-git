@@ -11,57 +11,97 @@ permissions:
 
 env:
   PROJECT_NAME: oh-my-git
-  GODOT_VERSION: 3.2.3
+  GODOT_VERSION: 3.6.3
 
 jobs:
   build:
-    name: Build macOS package
-    runs-on: ubuntu-24.04
+    name: Build Apple Silicon package
+    runs-on: macos-latest
 
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Install Godot 3.2.3
+      - name: Install Godot 3.6.3
         run: |
           set -euo pipefail
-          sudo apt-get update
-          sudo apt-get install -y --no-install-recommends make unzip zip
           curl -fsSL -o /tmp/godot.zip \
-            "https://github.com/godotengine/godot/releases/download/${GODOT_VERSION}-stable/Godot_v${GODOT_VERSION}-stable_linux_headless.64.zip"
-          unzip -q /tmp/godot.zip -d /tmp/godot
-          sudo install -m 755 "/tmp/godot/Godot_v${GODOT_VERSION}-stable_linux_headless.64" /usr/local/bin/godot
+            "https://github.com/godotengine/godot/releases/download/${GODOT_VERSION}-stable/Godot_v${GODOT_VERSION}-stable_osx.universal.zip"
+          rm -rf /tmp/godot-editor
+          unzip -q /tmp/godot.zip -d /tmp/godot-editor
+          xattr -cr /tmp/godot-editor || true
+          editor="$(find /tmp/godot-editor -type d -name 'Godot.app' | head -n 1)"
+          test -n "$editor"
+          bin="$editor/Contents/MacOS/Godot"
+          test -x "$bin"
+          sudo tee /usr/local/bin/godot >/dev/null << EOF
+          #!/bin/bash
+          exec $(printf '%q' "$bin") "\$@"
+          EOF
+          sudo chmod +x /usr/local/bin/godot
           curl -fsSL -o /tmp/templates.tpz \
             "https://github.com/godotengine/godot/releases/download/${GODOT_VERSION}-stable/Godot_v${GODOT_VERSION}-stable_export_templates.tpz"
-          mkdir -p "${HOME}/.local/share/godot/templates/${GODOT_VERSION}.stable"
-          unzip -q /tmp/templates.tpz -d /tmp/templates
-          mv /tmp/templates/templates/* "${HOME}/.local/share/godot/templates/${GODOT_VERSION}.stable/"
-          test -f "${HOME}/.local/share/godot/templates/${GODOT_VERSION}.stable/osx.zip"
-          # Godot 3.2 prints the version, then exits 255 from its error path.
+          dest="${HOME}/Library/Application Support/Godot/templates/${GODOT_VERSION}.stable"
+          rm -rf "$dest"
+          mkdir -p "$dest"
+          rm -rf /tmp/godot-templates
+          unzip -q /tmp/templates.tpz -d /tmp/godot-templates
+          mv /tmp/godot-templates/templates/* "$dest/"
+          test -f "$dest/osx.zip"
+          rm -rf /tmp/osx-template
+          unzip -q "$dest/osx.zip" -d /tmp/osx-template
+          template_bin="$(find /tmp/osx-template -type f -path '*/Contents/MacOS/*' | head -n 1)"
+          echo "template arches: $(lipo -archs "$template_bin")"
+          lipo -archs "$template_bin" | grep -q arm64
           version_out="$(godot --version 2>&1 || true)"
           printf '%s\n' "$version_out"
           printf '%s\n' "$version_out" | grep -q "${GODOT_VERSION}"
 
       - name: Build macOS
-        run: make macos
-
-      - name: Check archive
         run: |
           set -euo pipefail
-          unzip -t "build/${PROJECT_NAME}-macos.zip"
-          unzip -l "build/${PROJECT_NAME}-macos.zip" | head -n 40
-          unzip -l "build/${PROJECT_NAME}-macos.zip" | grep -q '\.app/'
+          mkdir -p build
+          godot --no-window --export "Mac OS" "build/${PROJECT_NAME}-macos.zip"
+
+      - name: Keep the arm64 slice and sign
+        run: |
+          set -euo pipefail
+          rm -rf build/unpacked
+          mkdir -p build/unpacked
+          unzip -q "build/${PROJECT_NAME}-macos.zip" -d build/unpacked
+          app="$(find build/unpacked -maxdepth 3 -type d -name '*.app' | head -n 1)"
+          test -d "$app"
+          while IFS= read -r -d '' bin; do
+            if file "$bin" | grep -q 'Mach-O'; then
+              arches="$(lipo -archs "$bin")"
+              echo "$bin arches: $arches"
+              case " $arches " in
+                *" arm64 "*) ;;
+                *) echo "export template has no arm64 slice" >&2; exit 1 ;;
+              esac
+              if [ "$arches" != "arm64" ]; then
+                lipo "$bin" -thin arm64 -output "$bin.arm64"
+                mv "$bin.arm64" "$bin"
+              fi
+              test "$(lipo -archs "$bin")" = "arm64"
+            fi
+          done < <(find "$app" -type f -print0)
+          codesign --force --sign - --deep "$app"
+          codesign --verify --strict --verbose=2 "$app"
+          rm -f "build/${PROJECT_NAME}-macos-arm64.zip"
+          ditto -c -k --keepParent "$app" "build/${PROJECT_NAME}-macos-arm64.zip"
+          file "$app"/Contents/MacOS/*
 
       - name: Upload build artifact
         uses: actions/upload-artifact@v4
         with:
-          name: ${{ env.PROJECT_NAME }}-macos
-          path: build/${{ env.PROJECT_NAME }}-macos.zip
+          name: ${{ env.PROJECT_NAME }}-macos-arm64
+          path: build/${{ env.PROJECT_NAME }}-macos-arm64.zip
           if-no-files-found: error
 
       - name: Publish GitHub Release
         if: startsWith(github.ref, 'refs/tags/')
         uses: softprops/action-gh-release@v2
         with:
-          files: build/${{ env.PROJECT_NAME }}-macos.zip
+          files: build/${{ env.PROJECT_NAME }}-macos-arm64.zip
           generate_release_notes: true

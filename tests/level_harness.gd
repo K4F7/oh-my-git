@@ -87,6 +87,9 @@ func _play(name, spec):
 	if failure == "" and spec.has("reject") and output.find(spec["reject"]) != -1:
 		failure = "terminal output contains '%s'" % spec["reject"]
 
+	if failure == "" and spec.has("notification") and not spec["notification"] in _notification_texts():
+		failure = "no notification '%s' (got %s)" % [spec["notification"], _notification_texts()]
+
 	# Exploratory cases only check that the game survives, not the level goals.
 	var goals_met = true
 	var win_states = {}
@@ -109,6 +112,13 @@ func _play(name, spec):
 			failure = "level has no goals"
 	print("  %s %s %s" % [status, name, failure])
 	results.push_back([name, status, failure])
+
+func _notification_texts():
+	var texts = []
+	for node in get_tree().root.get_children():
+		if node.get_script() == preload("res://scenes/notification.gd"):
+			texts.push_back(node.text)
+	return texts
 
 func _load_level(slug):
 	for chapter_id in range(levels.chapters.size()):
@@ -140,6 +150,8 @@ func _run_step(step):
 			break
 		if wants_editor and not answered_editor and editor.visible:
 			answered_editor = true
+			if step.has("shows") and editor.text.find(step["shows"]) == -1:
+				failure = "editor shows '%s', expected '%s'" % [editor.text, step["shows"]]
 			_answer_editor(editor, step)
 		yield(get_tree(), "idle_frame")
 	terminal.disconnect("command_done", self, "_on_command_done")

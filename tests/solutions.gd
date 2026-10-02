@@ -4,7 +4,8 @@ extends Reference
 # terminal by the level harness. An entry can also be a Dictionary
 # {"cmd": ..., "editor": ...}: the command is expected to open the in-game
 # text editor (via fake-editor), whose buffer is then replaced by "editor"
-# (or kept as-is when "editor" is null) and saved. "reorder" instead permutes
+# (or kept as-is when "editor" is null) and saved; "shows" must appear in the
+# buffer the editor opened with. "reorder" instead permutes
 # the non-comment lines of the buffer (used for interactive rebase todo lists).
 const SOLUTIONS = {
 	"intro/risky": ["echo '- Because it is fun' >> form.txt"],
@@ -193,6 +194,9 @@ const NO_GOAL_LEVELS = ["sandbox/empty", "sandbox/remote", "sandbox/three-commit
 # steps to type; the run fails if the game quits (helpers.crash()), a command
 # times out, the terminal output lacks "expect" or contains "reject".
 const EXPLORATORY = {
+	"hint-script": {"level": "sandbox/empty", "steps": ["hint '你好，hint'"], "reject": "Can't call method", "notification": "你好，hint"},
+	"editor-non-ascii": {"level": "sandbox/three-commits", "steps": [{"cmd": "echo x >> you; git commit -a", "editor": "喝水 ☕\n"}, "git log -1 --format=%s"], "expect": "$ git log -1 --format=%s\n喝水 ☕", "reject": "did not conform to UTF-8"},
+	"editor-shows-non-ascii": {"level": "sandbox/three-commits", "steps": ["echo '中文内容' > you", {"cmd": "fake-editor you", "editor": null, "shows": "中文内容"}, "cat you"], "expect": "$ cat you\n中文内容"},
 	"space-in-filename": {"level": "sandbox/three-commits", "steps": ["touch 'a b'", "git add .", "git commit -m space"]},
 	"tag-on-tree": {"level": "sandbox/three-commits", "steps": ["git tag tree-tag HEAD^{tree}"]},
 	"annotated-tag": {"level": "sandbox/three-commits", "steps": ["git tag -a v1 -m 'release one'"]},

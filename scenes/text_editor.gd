@@ -16,10 +16,11 @@ func _process(_delta):
 	if _server.is_connection_available():
 		_client_connection = _server.take_connection()
 		var length = _client_connection.get_u32()
-		var _filename = _client_connection.get_string(length)
+		# fake-editor sends raw file bytes; decode them as UTF-8, not ASCII.
+		var _filename = _client_connection.get_utf8_string(length)
 		
 		length = _client_connection.get_u32()
-		var content = _client_connection.get_string(length)
+		var content = _client_connection.get_utf8_string(length)
 		
 		open(content)
 		
@@ -39,7 +40,7 @@ func save():
 			text += "\n"
 		
 		# Prefix with an 's' to say that this is a "save", not a "close".
-		_client_connection.put_string("s" + text)
+		_client_connection.put_utf8_string("s" + text)
 		
 		emit_signal("saved")
 		close()

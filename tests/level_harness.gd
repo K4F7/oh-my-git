@@ -87,6 +87,9 @@ func _play(name, spec):
 	if failure == "" and spec.has("reject") and output.find(spec["reject"]) != -1:
 		failure = "terminal output contains '%s'" % spec["reject"]
 
+	if failure == "" and spec.has("files") and _file_browser_labels() != spec["files"]:
+		failure = "file browser shows %s, expected %s" % [_file_browser_labels(), spec["files"]]
+
 	# Exploratory cases only check that the game survives, not the level goals.
 	var goals_met = true
 	var win_states = {}
@@ -109,6 +112,14 @@ func _play(name, spec):
 			failure = "level has no goals"
 	print("  %s %s %s" % [status, name, failure])
 	results.push_back([name, status, failure])
+
+func _file_browser_labels():
+	var labels = []
+	for item in main.file_browser.grid.get_children():
+		if not item.is_queued_for_deletion():
+			labels.push_back(item.label)
+	labels.sort()
+	return labels
 
 func _load_level(slug):
 	for chapter_id in range(levels.chapters.size()):

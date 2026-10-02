@@ -297,13 +297,14 @@ func all_refs():
 	
 func ref_target(ref):
 	# Test whether this is a symbolic ref.
-	var ret = git("symbolic-ref -q "+ref+" || true")
+	var quoted = helpers.shell_quote(ref)
+	var ret = git("symbolic-ref -q "+quoted+" || true")
 	# If it's not, it's probably a regular ref.
 	if ret == "":
 		if ref == "HEAD":
 			ret = git("show-ref --head "+ref).split(" ")[0]
 		else:
-			ret = git("show-ref "+ref).split(" ")[0]
+			ret = git("show-ref "+quoted).split(" ")[0]
 	return ret
 
 func set_simplified_view(simplify):

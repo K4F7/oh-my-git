@@ -11,6 +11,11 @@ func crash(message):
 	# Violent delights have violent ends.
 	get_tree().fatal_error()
 
+# Quote text as a single bash word, so that file and ref names containing
+# quotes, spaces or other shell syntax reach the command unchanged.
+func shell_quote(text):
+	return "'" + text.replace("'", "'\"'\"'") + "'"
+
 func map(array, object, f):
 	var new_array = []
 	for i in range(array.size()):
@@ -100,7 +105,7 @@ func careful_delete(path_inside):
 		helpers.crash("拒绝删除目录 %s，因为它不是以 %s 开头" % [path_inside, expected_prefix])
 	else:
 		game.global_shell.cd(game.tmp_prefix)
-		game.global_shell.run("rm -rf '%s'" % path_inside)
+		game.global_shell.run("rm -rf %s" % shell_quote(path_inside))
 
 func parse(file):
 	var text = read_file(file)

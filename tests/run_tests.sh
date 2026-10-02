@@ -29,7 +29,12 @@ run_harness() {
 run_harness "$log_dir/levels.log" || failed=1
 grep '^TOTAL ' "$log_dir/levels.log"
 
-for case in $(grep -oE '^	"[a-z0-9-]+": \{"level"' tests/solutions.gd | cut -d'"' -f2); do
+cases=$("$godot" --no-window --path . res://tests/level_harness.tscn --list-explore 2>/dev/null | sed -n 's/^EXPLORE //p')
+if [ -z "$cases" ]; then
+	echo "FAILED  could not list exploratory cases"
+	failed=1
+fi
+for case in $cases; do
 	if run_harness "$log_dir/explore-$case.log" --explore --only="$case" > /dev/null; then
 		echo "ok      explore/$case"
 	else

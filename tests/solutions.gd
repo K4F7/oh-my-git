@@ -185,6 +185,9 @@ const SOLUTIONS = {
 	"sandbox/three-commits": ["git checkout not_main", "git log --oneline"],
 }
 
+# Levels that intentionally have no win conditions.
+const NO_GOAL_LEVELS = ["sandbox/empty", "sandbox/remote", "sandbox/three-commits"]
+
 # Exploratory sessions that poke at the visualisation and file browser with
 # unusual but legal input. Each entry names the level to start from and the
 # steps to type; the run fails if the game quits (helpers.crash()), a command

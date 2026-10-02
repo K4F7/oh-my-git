@@ -6,6 +6,7 @@ extends Node
 #
 #   godot --no-window --path . res://tests/level_harness.tscn [--only=<name>]
 #   godot --no-window --path . res://tests/level_harness.tscn --explore [--only=<name>]
+#   godot --no-window --path . res://tests/level_harness.tscn --list-explore
 #
 # The default mode plays every level with its entry in Solutions.SOLUTIONS.
 # --explore runs Solutions.EXPLORATORY instead. The process exits with the
@@ -35,6 +36,11 @@ func _run():
 	yield(get_tree(), "idle_frame")
 
 	var args = helpers.parse_args()
+	if args.has("list-explore"):
+		for name in Solutions.EXPLORATORY:
+			print("EXPLORE %s" % name)
+		get_tree().quit(0)
+		return
 	var only = args.get("only", "")
 	var cases = Solutions.EXPLORATORY if args.has("explore") else _level_cases()
 	for name in cases:
@@ -43,6 +49,8 @@ func _run():
 		var state = _play(name, cases[name])
 		while state is GDScriptFunctionState:
 			state = yield(state, "completed")
+	if results.empty():
+		results.push_back([only, "FAIL", "no case selected"])
 	_report()
 
 func _level_cases():
@@ -94,7 +102,11 @@ func _play(name, spec):
 	if failure != "":
 		status = "FAIL"
 	elif win_states.empty() and spec.get("goals", false):
-		status = "NOGOALS"
+		if spec["level"] in Solutions.NO_GOAL_LEVELS:
+			status = "NOGOALS"
+		else:
+			status = "FAIL"
+			failure = "level has no goals"
 	print("  %s %s %s" % [status, name, failure])
 	results.push_back([name, status, failure])
 

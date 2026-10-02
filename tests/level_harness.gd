@@ -124,27 +124,32 @@ func _run_step(step):
 	var command = step["cmd"] if step is Dictionary else step
 	var wants_editor = step is Dictionary
 	print("  $ %s" % command)
-	var done = [false]
-	terminal.connect("command_done", self, "_on_command_done", [done], CONNECT_ONESHOT)
+	# Saving the in-game editor emits command_done too (Terminal.editor_saved),
+	# so an editor step is only finished after the second emission.
+	var expected_signals = 2 if wants_editor else 1
+	var done = [0]
+	terminal.connect("command_done", self, "_on_command_done", [done])
 	terminal.send_command(command)
 	var editor = terminal.find_node("TextEditor")
 	var answered_editor = false
 	var started = OS.get_ticks_msec()
-	while not done[0]:
+	var failure = ""
+	while done[0] < expected_signals:
 		if OS.get_ticks_msec() - started > COMMAND_TIMEOUT_MSEC:
-			terminal.disconnect("command_done", self, "_on_command_done")
-			return "timeout running '%s'" % command
+			failure = "timeout running '%s'" % command
+			break
 		if wants_editor and not answered_editor and editor.visible:
 			answered_editor = true
 			_answer_editor(editor, step)
 		yield(get_tree(), "idle_frame")
-	if wants_editor and not answered_editor:
-		return "editor never opened for '%s'" % command
+	terminal.disconnect("command_done", self, "_on_command_done")
+	if failure == "" and wants_editor and not answered_editor:
+		failure = "editor never opened for '%s'" % command
 	_print_output_tail()
-	return ""
+	return failure
 
 func _on_command_done(done):
-	done[0] = true
+	done[0] += 1
 
 func _answer_editor(editor, step):
 	if step.has("reorder"):

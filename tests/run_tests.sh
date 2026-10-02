@@ -57,5 +57,14 @@ else
 	failed=1
 fi
 
+# Ctrl+S / Cmd+S etc. must each trigger the shortcut on their own.
+if "$godot" --no-window --path . -s res://tests/input_probe.gd > "$log_dir/shortcuts.log" 2>&1; then
+	echo "ok      input/shortcuts"
+else
+	echo "FAILED  input/shortcuts (see $log_dir/shortcuts.log)"
+	grep '^FAILED' "$log_dir/shortcuts.log"
+	failed=1
+fi
+
 echo "logs: $log_dir"
 exit $failed

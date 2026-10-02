@@ -21,18 +21,18 @@ jobs:
         run: |
           set -euo pipefail
           sudo apt-get update -q
-          sudo apt-get install -yq xvfb git perl
+          sudo apt-get install -yq git perl
           curl -fsSL -o /tmp/godot.zip \
-            "https://github.com/godotengine/godot/releases/download/${GODOT_VERSION}-stable/Godot_v${GODOT_VERSION}-stable_x11.64.zip"
+            "https://github.com/godotengine/godot/releases/download/${GODOT_VERSION}-stable/Godot_v${GODOT_VERSION}-stable_linux_headless.64.zip"
           unzip -q /tmp/godot.zip -d /tmp/godot
-          echo "GODOT=/tmp/godot/Godot_v${GODOT_VERSION}-stable_x11.64" >> "$GITHUB_ENV"
+          echo "GODOT=/tmp/godot/Godot_v${GODOT_VERSION}-stable_linux_headless.64" >> "$GITHUB_ENV"
 
       - name: Import resources
         # The editor sometimes keeps running after an import with --quit.
-        run: timeout 300 xvfb-run -a "$GODOT" --editor --quit --no-window --path . || true
+        run: timeout 300 "$GODOT" --editor --quit --path . || true
 
       - name: Run level harness
-        run: LOG_DIR="$RUNNER_TEMP/logs" xvfb-run -a tests/run_tests.sh
+        run: LOG_DIR="$RUNNER_TEMP/logs" tests/run_tests.sh
 
       - name: Upload logs
         if: always()
